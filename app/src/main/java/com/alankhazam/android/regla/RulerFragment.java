@@ -7,6 +7,7 @@ import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -15,10 +16,8 @@ import android.widget.TextView;
  * A fragment displaying a ruler.
  */
 public class RulerFragment extends Fragment {
-    private int widthSegmentPixels;
-    private int widthNumSegments;
-    private int heightSegmentPixels;
-    private int heightNumSegments;
+    private View rootView;
+    private ListView rulerListView;
 
     public RulerFragment() {
     }
@@ -26,45 +25,34 @@ public class RulerFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_ruler, container, false);
+        rootView = inflater.inflate(R.layout.fragment_ruler, container, false);
 
-        calculateRulerValues();
+        rulerListView = (ListView) rootView.findViewById(R.id.rulerListView);
 
-        // Display ruler
-        ((ListView) view.findViewById(R.id.rulerListView)).setAdapter(
-                new RulerAdapter(getActivity(), R.layout.listitem_ruler_segment,
-                        heightNumSegments, heightSegmentPixels));
+        final int heightDPI = (int) getResources().getDisplayMetrics().ydpi;
 
-        return view;
-    }
+        // Add listener to draw ruler after rootView has been drawn in order to obtain proper height
+        rootView.getViewTreeObserver().addOnGlobalLayoutListener(
+                new ViewTreeObserver.OnGlobalLayoutListener() {
+                    public void onGlobalLayout() {
+                        if (rulerListView.getHeight() == 0) {
+                            // Draw initial ruler with rootView height
+                            rulerListView.setAdapter(
+                                    new RulerAdapter(getActivity(), R.layout.listitem_ruler_segment,
+                                            rootView.getHeight(), heightDPI));
+                        } else {
+                            // Remove listener RulerListView has been drawn once
+                            rootView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
 
-    /**
-     * Calculate necessary ruler values using screen length and DPI
-     */
-    private void calculateRulerValues() {
-        // Calculate the pixels per 1/16th inch segment
-        widthSegmentPixels = (int) (getWidthDPI() / 16);
-        heightSegmentPixels = (int) (getHeightDPI() / 16);
+                            // Redraw ruler to maximum length
+                            rulerListView.setAdapter(
+                                    new RulerAdapter(getActivity(), R.layout.listitem_ruler_segment,
+                                            rulerListView.getHeight(), heightDPI));
+                        }
+                    }
+                });
 
-        // Calculate the number of 1/16th inch segments that will fit
-        widthNumSegments = getWidthPixels() / widthSegmentPixels;
-        heightNumSegments = getHeightPixels() / heightSegmentPixels;
-    }
-
-    private float getWidthDPI() {
-        return getResources().getDisplayMetrics().xdpi;
-    }
-
-    private int getWidthPixels() {
-        return getResources().getDisplayMetrics().widthPixels;
-    }
-
-    private float getHeightDPI() {
-        return getResources().getDisplayMetrics().ydpi;
-    }
-
-    private int getHeightPixels() {
-        return getResources().getDisplayMetrics().heightPixels;
+        return rootView;
     }
 
     /**
@@ -88,12 +76,18 @@ public class RulerFragment extends Fragment {
          * Constructor
          *
          * @param context  The current context.
-         * @param resource The resource ID for a layout file containing a TextView to use when
+         * @param resource The resource ID for a layout file containing a TextView to use when.
+         * @param pixels   The length of the ruler in pixels.
+         * @param dpi      The relevant DPI.
          */
-        public RulerAdapter(Context context, int resource, int numSegments, int segmentPixels) {
+        public RulerAdapter(Context context, int resource, int pixels, int dpi) {
             super(context, resource);
-            this.numSegments = numSegments;
-            this.segmentPixels = segmentPixels;
+
+            // Calculate the pixels per 1/16th inch segment
+            this.segmentPixels = dpi / 16;
+
+            // Calculate the necessary number of segments
+            this.numSegments = pixels / segmentPixels;
 
             baseMarkerThickness = segmentPixels / 4;
             baseMarkerLength = segmentPixels;
