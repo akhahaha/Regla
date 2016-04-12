@@ -12,6 +12,9 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * A fragment displaying a ruler.
  */
@@ -68,14 +71,18 @@ public class RulerFragment extends Fragment {
      * Adapter to convert a vertical ListView into a RulerView.
      */
     private class RulerAdapter extends ArrayAdapter<Integer> {
+        private int SEGMENT_UNIT_FRACTION = 16;
+
         private final double WHOLE_INCH_MULTIPLIER = 6;
         private final double HALF_INCH_MULTIPLIER = 5;
         private final double QUARTER_INCH_MULTIPLIER = 4;
         private final double EIGHTH_INCH_MULTIPLIER = 3;
         private final double SIXTEENTH_INCH_MULTIPLIER = 2;
 
-        private int numSegments; // Number of 1/16-inch segments
         private int segmentPixels;
+        private double segmentFraction;
+        private int numSegments;
+        private Map<Integer, Double> fractionMap;
 
         private int baseMarkerThickness = 1; // Base segment marker width in dp
         private int baseMarkerLength = 10; // Base segment marker length in dp
@@ -92,8 +99,10 @@ public class RulerFragment extends Fragment {
         public RulerAdapter(Context context, int resource, int pixels, int dpi) {
             super(context, resource);
 
-            // Calculate the pixels per 1/16-inch segment
-            this.segmentPixels = dpi / 16;
+            // Calculate the pixels per segment unit
+            this.segmentPixels = dpi / SEGMENT_UNIT_FRACTION;
+            this.segmentFraction = (double) dpi / (double) SEGMENT_UNIT_FRACTION - segmentPixels;
+            fractionMap = new HashMap<>();
 
             // Calculate the necessary number of segments
             this.numSegments = pixels / segmentPixels;
@@ -117,10 +126,19 @@ public class RulerFragment extends Fragment {
                 convertView = inflater.inflate(R.layout.listitem_ruler_segment, parent, false);
             }
 
-            // Set segment length to 1/16-inch
+            // Set segment length
             ViewGroup.LayoutParams segmentParams = convertView.getLayoutParams();
-            segmentParams.height = segmentPixels;
+            // Compensate for leap pixels
+            Double compensation = fractionMap.get(position - 1); // Get previous fraction
+            if (compensation == null) {
+                compensation = 0.0;
+            }
+            compensation += segmentFraction; // Add segment fraction
+            segmentParams.height = (int) (segmentPixels + compensation);
             convertView.setLayoutParams(segmentParams);
+
+            // Store remaining fraction
+            fractionMap.put(position, compensation - Math.floor(compensation));
 
             // Customize segment display
             double multiplier;
@@ -167,8 +185,12 @@ public class RulerFragment extends Fragment {
      * Adapter to convert a vertical ListView into a RulerView.
      */
     private class RulerValueAdapter extends ArrayAdapter<Integer> {
-        private int numSegments; // Number of 1/2-inch segments
+        private int SEGMENT_UNIT_FRACTION = 2;
+
         private int segmentPixels;
+        private double segmentFraction;
+        private int numSegments;
+        private Map<Integer, Double> fractionMap;
 
         /**
          * Constructor
@@ -181,8 +203,10 @@ public class RulerFragment extends Fragment {
         public RulerValueAdapter(Context context, int resource, int pixels, int dpi) {
             super(context, resource);
 
-            // Calculate the pixels per 1/2-inch segment
-            this.segmentPixels = dpi / 2;
+            // Calculate the pixels per segment unit
+            this.segmentPixels = dpi / SEGMENT_UNIT_FRACTION;
+            this.segmentFraction = (double) dpi / (double) SEGMENT_UNIT_FRACTION - segmentPixels;
+            fractionMap = new HashMap<>();
 
             // Calculate the necessary number of segments
             this.numSegments = pixels / segmentPixels;
@@ -202,10 +226,19 @@ public class RulerFragment extends Fragment {
                 convertView = inflater.inflate(R.layout.listitem_ruler_value, parent, false);
             }
 
-            // Set segment length to 1/2-inch
+            // Set segment length
             ViewGroup.LayoutParams segmentParams = convertView.getLayoutParams();
-            segmentParams.height = segmentPixels;
+            // Compensate for leap pixels
+            Double compensation = fractionMap.get(position - 1); // Get previous fraction
+            if (compensation == null) {
+                compensation = 0.0;
+            }
+            compensation += segmentFraction; // Add segment fraction
+            segmentParams.height = (int) (segmentPixels + compensation);
             convertView.setLayoutParams(segmentParams);
+
+            // Store remaining fraction
+            fractionMap.put(position, compensation - Math.floor(compensation));
 
             // Customize segment display
             TextView markerTextView = ((TextView) convertView.findViewById(R.id.segmentValue));
