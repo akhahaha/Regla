@@ -1,4 +1,4 @@
-package com.alankhazam.android.regla;
+package com.akhahaha.regla.android;
 
 import org.junit.Test;
 

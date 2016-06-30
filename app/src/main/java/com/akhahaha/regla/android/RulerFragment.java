@@ -1,4 +1,4 @@
-package com.alankhazam.android.regla;
+package com.akhahaha.regla.android;
 
 import android.content.Context;
 import android.graphics.Typeface;
@@ -11,6 +11,8 @@ import android.view.ViewTreeObserver;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
+
+import com.akhahaha.regla.android.R;
 
 import java.util.HashMap;
 import java.util.Map;
